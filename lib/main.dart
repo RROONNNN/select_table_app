@@ -33,20 +33,25 @@ class _WebSocketPageState extends State<WebSocketPage> {
   late WebSocketChannel channel;
   bool isConnected = false;
   String? currentStatus;
+  final TextEditingController _ipController = TextEditingController();
+  String serverIP = "192.168.1.32";
 
   @override
   void initState() {
     super.initState();
-    _connectWebSocket();
+    _ipController.text = serverIP;
+    // Không tự động kết nối ngay, để người dùng nhập IP trước
   }
 
   void _connectWebSocket() {
     try {
-      channel = WebSocketChannel.connect(Uri.parse('ws://192.168.1.21:5000/'));
+      channel = WebSocketChannel.connect(Uri.parse('ws://$serverIP:5000/'));
 
       // Send identification message
       channel.sink.add('flutter');
-      isConnected = true;
+      setState(() {
+        isConnected = true;
+      });
 
       channel.stream.listen(
         (message) {
@@ -125,7 +130,10 @@ class _WebSocketPageState extends State<WebSocketPage> {
 
   @override
   void dispose() {
-    channel.sink.close();
+    if (isConnected) {
+      channel.sink.close();
+    }
+    _ipController.dispose();
     super.dispose();
   }
 
@@ -161,6 +169,32 @@ class _WebSocketPageState extends State<WebSocketPage> {
                 ],
               ),
             ),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _ipController,
+                    decoration: const InputDecoration(
+                      labelText: 'IP Server',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                ElevatedButton(
+                  onPressed: () {
+                    setState(() {
+                      serverIP = _ipController.text;
+                    });
+                    _connectWebSocket();
+                  },
+                  child: Text(isConnected ? 'Đã kết nối' : 'Kết nối'),
+                ),
+              ],
+            ),
+          ),
           Expanded(
             child: Center(
               child: Column(
