@@ -12,9 +12,14 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'WebSocket Demo',
+      title: 'Restaurant Robot Control',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFFE65100),
+          primary: const Color(0xFFE65100),
+          secondary: const Color(0xFF4CAF50),
+        ),
         useMaterial3: true,
       ),
       home: const WebSocketPage(),
@@ -40,14 +45,12 @@ class _WebSocketPageState extends State<WebSocketPage> {
   void initState() {
     super.initState();
     _ipController.text = serverIP;
-    // Không tự động kết nối ngay, để người dùng nhập IP trước
   }
 
   void _connectWebSocket() {
     try {
       channel = WebSocketChannel.connect(Uri.parse('ws://$serverIP:5000/'));
 
-      // Send identification message
       channel.sink.add('flutter');
       setState(() {
         isConnected = true;
@@ -58,7 +61,6 @@ class _WebSocketPageState extends State<WebSocketPage> {
           try {
             final Map<String, dynamic> jsonResponse = json.decode(message);
 
-            // Handle success response
             if (jsonResponse.containsKey('status') &&
                 jsonResponse['status'] == 'success') {
               ScaffoldMessenger.of(context).showSnackBar(
@@ -69,7 +71,6 @@ class _WebSocketPageState extends State<WebSocketPage> {
               );
             }
 
-            // Handle car status response
             if (jsonResponse.containsKey('car_status')) {
               setState(() {
                 currentStatus = jsonResponse['car_status'];
@@ -86,32 +87,38 @@ class _WebSocketPageState extends State<WebSocketPage> {
           }
         },
         onError: (error) {
+          setState(() {
+            isConnected = false;
+          });
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Lỗi kết nối: $error'),
               backgroundColor: Colors.red,
             ),
           );
-          isConnected = false;
         },
         onDone: () {
+          setState(() {
+            isConnected = false;
+          });
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Mất kết nối với server'),
               backgroundColor: Colors.red,
             ),
           );
-          isConnected = false;
         },
       );
     } catch (e) {
+      setState(() {
+        isConnected = false;
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Không thể kết nối: $e'),
           backgroundColor: Colors.red,
         ),
       );
-      isConnected = false;
     }
   }
 
@@ -141,98 +148,218 @@ class _WebSocketPageState extends State<WebSocketPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('WebSocket Demo'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        title: const Text(
+          'Điều Khiển Robot Nhà Hàng',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        foregroundColor: Colors.white,
       ),
-      body: Column(
-        children: [
-          if (currentStatus != null)
-            Container(
-              padding: const EdgeInsets.all(16),
-              margin: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.blue.shade100,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.directions_car, size: 24),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Trạng thái xe: $currentStatus',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _ipController,
-                    decoration: const InputDecoration(
-                      labelText: 'IP Server',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                ElevatedButton(
-                  onPressed: () {
-                    setState(() {
-                      serverIP = _ipController.text;
-                    });
-                    _connectWebSocket();
-                  },
-                  child: Text(isConnected ? 'Đã kết nối' : 'Kết nối'),
-                ),
-              ],
+      body: GestureDetector(
+        onTap: () {
+          FocusScope.of(context).unfocus();
+        },
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Colors.orange.shade50, Colors.white],
             ),
           ),
-          Expanded(
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      _buildButton('A1'),
-                      const SizedBox(width: 20),
-                      _buildButton('A2'),
+          child: Column(
+            children: [
+              if (currentStatus != null)
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  margin: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withOpacity(0.2),
+                        spreadRadius: 2,
+                        blurRadius: 5,
+                        offset: const Offset(0, 3),
+                      ),
                     ],
                   ),
-                  const SizedBox(height: 20),
-                  Row(
+                  child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      _buildButton('B1'),
-                      const SizedBox(width: 20),
-                      _buildButton('B2'),
+                      Icon(
+                        Icons.delivery_dining,
+                        size: 28,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Trạng thái: $currentStatus',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ],
                   ),
-                ],
+                ),
+              Container(
+                padding: const EdgeInsets.all(16.0),
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.withOpacity(0.2),
+                      spreadRadius: 2,
+                      blurRadius: 5,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _ipController,
+                        decoration: InputDecoration(
+                          labelText: 'IP Server',
+                          prefixIcon: const Icon(Icons.computer),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          filled: true,
+                          fillColor: Colors.grey.shade50,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        if (isConnected) {
+                          channel.sink.close();
+                          setState(() {
+                            isConnected = false;
+                          });
+                        } else {
+                          setState(() {
+                            serverIP = _ipController.text;
+                          });
+                          _connectWebSocket();
+                        }
+                      },
+                      icon: Icon(
+                        isConnected ? Icons.link_off : Icons.link,
+                        color: Colors.white,
+                      ),
+                      label: Text(
+                        isConnected ? 'Ngắt kết nối' : 'Kết nối',
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor:
+                            isConnected
+                                ? Colors.red
+                                : Theme.of(context).colorScheme.primary,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 12,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
+              const SizedBox(height: 20),
+              Text(
+                'Chọn Bàn',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Expanded(
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          _buildTableButton('A1'),
+                          const SizedBox(width: 20),
+                          _buildTableButton('A2'),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          _buildTableButton('B1'),
+                          const SizedBox(width: 20),
+                          _buildTableButton('B2'),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildButton(String text) {
-    return ElevatedButton(
-      onPressed: () => _sendMessage(text),
-      style: ElevatedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
+  Widget _buildTableButton(String tableId) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.2),
+            spreadRadius: 2,
+            blurRadius: 5,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
-      child: Text(text, style: const TextStyle(fontSize: 20)),
+      child: ElevatedButton(
+        onPressed: () => _sendMessage(tableId),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.table_restaurant,
+              size: 32,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Bàn $tableId',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
